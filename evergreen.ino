@@ -339,7 +339,7 @@ void setColor(RGB col, float topIntensity, float bottomIntensity) {
   SoftPWMSet(topGPin, byte(col.g * topIntensity));
   SoftPWMSet(topBPin, byte(col.b * topIntensity));
 
-  SoftPWMSet(botRPin, byte(col.r * topIntensity));
-  SoftPWMSet(botGPin, byte(col.g * topIntensity));
-  SoftPWMSet(botBPin, byte(col.b * topIntensity));
+  SoftPWMSet(botRPin, byte(col.r * bottomIntensity));
+  SoftPWMSet(botGPin, byte(col.g * bottomIntensity));
+  SoftPWMSet(botBPin, byte(col.b * bottomIntensity));
 }
