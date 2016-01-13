@@ -13,9 +13,11 @@
 #include "SoftPWM.h"
 #include "SoftPWM_timer.h"
 
+#include "FastRunningMedian.h"        // From http://forum.arduino.cc/index.php?topic=53081.msg1160999#msg1160999
+
 // Settings for mode filter
-#define NUM_VALS_MEDIAN       40
-#define SPAN_MEAN             5
+#define NUM_VALS_MEDIAN       32
+#define MEDIAN_SAMPLES        6
 
 // LED intensity
 #define INTENSITY_MAX         1.0
@@ -76,7 +78,7 @@ enum FadingState {
 // Mode filter based on
 // https://gist.github.com/ofZach/5082043
 // http://www.elcojacobs.com/eleminating-noise-from-sensor-readings-on-arduino-with-digital-filtering/
-class ModeFilter {
+/*class ModeFilter {
 
   public:
 
@@ -135,7 +137,7 @@ class ModeFilter {
         }
       }
     }
-};
+};*/
 
 RGB colorDisconnected =       { 0  , 0  , 0   };
 RGB colorDry          =       { 220, 50 , 0   };
@@ -144,11 +146,11 @@ RGB colorWater        =       { 0  , 50 , 250 };
 RGB colorError        =       { 255, 0  , 0   };
 
 // Variables
-int btnState = 0;
-int potValue = 0;
-int lightValue = 0;
-int soilValue = 0;
-int waterValue = 0;
+unsigned int btnState = 0;
+unsigned int potValue = 0;
+unsigned int lightValue = 0;
+unsigned int soilValue = 0;
+unsigned int waterValue = 0;
 
 bool irrigationStarted = false;
 unsigned long fadingStartTime = 0;
@@ -159,6 +161,10 @@ float intensity = INTENSITY_DEFAULT;
 // ModeFilter lightFilter = ModeFilter();
 // ModeFilter waterFilter = ModeFilter();
 
+FastRunningMedian<unsigned int, NUM_VALS_MEDIAN, 0> soilFilter;
+FastRunningMedian<unsigned int, NUM_VALS_MEDIAN, 0> lightFilter;
+FastRunningMedian<unsigned int, NUM_VALS_MEDIAN, 0> waterFilter;
+
 void setup() {
   Serial.begin(9600);
   Serial.println("Welcome to Evergreen :)");
@@ -166,7 +172,7 @@ void setup() {
   // Setup pins
   pinMode(btnPin, INPUT);
   pinMode(gatePin, OUTPUT);
-  
+  analogWrite(gatePin, GATE_OFF);
 
   // Setup software PWM
   SoftPWMBegin();
@@ -184,18 +190,32 @@ void setup() {
   SoftPWMSetFadeTime(botRPin, FADE_IN_TIME_MS, FADE_OUT_TIME_MS);
   SoftPWMSetFadeTime(botGPin, FADE_IN_TIME_MS, FADE_OUT_TIME_MS);
   SoftPWMSetFadeTime(botBPin, FADE_IN_TIME_MS, FADE_OUT_TIME_MS);
+
+  // Initialize median filters
+  for (int i = 0; i < NUM_VALS_MEDIAN; i++) soilFilter.addValue(analogRead(soilPin));
+  for (int i = 0; i < NUM_VALS_MEDIAN; i++) lightFilter.addValue(analogRead(lightPin));
+  for (int i = 0; i < NUM_VALS_MEDIAN; i++) waterFilter.addValue(analogRead(waterPin));
 }
 
 void loop() {
   // Read sensor values
   btnState = digitalRead(btnPin);
   potValue = analogRead(potPin);
-  analogWrite(gatePin, GATE_OFF);
 
   // Smooth sensor readings
-  lightValue = analogRead(lightPin); // lightFilter.processValue(analogRead(lightPin));
-  soilValue = analogRead(soilPin); // soilFilter.processValue(analogRead(soilPin));
-  waterValue = analogRead(waterPin); // waterFilter.processValue(analogRead(waterPin));
+  soilFilter.addValue(analogRead(soilPin));
+  lightFilter.addValue(analogRead(lightPin));
+  waterFilter.addValue(analogRead(waterPin));
+
+  soilValue = soilFilter.getAverage(MEDIAN_SAMPLES);
+  lightValue = lightFilter.getAverage(MEDIAN_SAMPLES);
+  waterValue = waterFilter.getAverage(MEDIAN_SAMPLES);
+  
+  // lightValue = analogRead(lightPin); // lightFilter.processValue(analogRead(lightPin));
+  // soilValue = analogRead(soilPin); // soilFilter.processValue(analogRead(soilPin));
+  // waterValue = analogRead(waterPin); // waterFilter.processValue(analogRead(waterPin));
+
+  // Serial.println(lightValue);
 
   // Check button
   if (btnState == HIGH) {
