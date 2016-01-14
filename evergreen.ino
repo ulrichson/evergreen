@@ -22,6 +22,9 @@ U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NO_ACK);
 #define NUM_VALS_MEDIAN       32
 #define MEDIAN_SAMPLES        6
 
+// Size for buffer to store numeric values (for OLED display)
+#define NUM_BUFFER_SIZE       8
+
 // LED intensity
 #define INTENSITY_MAX         1.0
 #define INTENSITY_MIN         0.1
@@ -160,6 +163,9 @@ unsigned long fadingStartTime = 0;
 FadingState fadingState = none;
 float intensity = INTENSITY_DEFAULT;
 
+// Buffer for numeric values
+char numBuffer[NUM_BUFFER_SIZE];
+
 // ModeFilter soilFilter = ModeFilter();
 // ModeFilter lightFilter = ModeFilter();
 // ModeFilter waterFilter = ModeFilter();
@@ -284,7 +290,15 @@ void loop() {
 
 void draw() {
   u8g.setFont(u8g_font_unifont);
-  u8g.drawStr(20, 20, "Hello World!");
+  snprintf (numBuffer, NUM_BUFFER_SIZE, "%d", soilValue);
+  u8g.drawStr(0, 20, "Soil: ");
+  u8g.drawStr(70, 20, numBuffer);
+  snprintf (numBuffer, NUM_BUFFER_SIZE, "%d", lightValue);
+  u8g.drawStr(0, 40, "Light: ");
+  u8g.drawStr(70, 40, numBuffer);
+  snprintf (numBuffer, NUM_BUFFER_SIZE, "%d", waterValue);
+  u8g.drawStr(0, 60, "Water: ");
+  u8g.drawStr(70, 60, numBuffer);
 }
 
 void fadeIn() {
