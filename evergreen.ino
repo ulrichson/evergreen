@@ -4,7 +4,7 @@
 
   This sketch detects soil humidity and allows to water plants via a water pump.
   Additionally it measures the sunlight.
-  
+
   It is designed for the Minigarden vertical garden system (http://minigarden.net),
   altough this can be utilized for similar systems with an overflow water collection tank
 
@@ -14,6 +14,9 @@
 #include "SoftPWM_timer.h"
 
 #include "FastRunningMedian.h"        // From http://forum.arduino.cc/index.php?topic=53081.msg1160999#msg1160999
+
+#include <U8glib.h>
+U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NO_ACK);
 
 // Settings for mode filter
 #define NUM_VALS_MEDIAN       32
@@ -44,8 +47,8 @@
 // INPUT Pins
 #define potPin                0
 #define lightPin              1
-#define waterPin              4
-#define soilPin               5
+#define waterPin              2
+#define soilPin               3
 #define btnPin                8
 
 // OUTPUT Pins
@@ -137,7 +140,7 @@ enum FadingState {
         }
       }
     }
-};*/
+  };*/
 
 RGB colorDisconnected =       { 0  , 0  , 0   };
 RGB colorDry          =       { 220, 50 , 0   };
@@ -210,7 +213,7 @@ void loop() {
   soilValue = soilFilter.getAverage(MEDIAN_SAMPLES);
   lightValue = lightFilter.getAverage(MEDIAN_SAMPLES);
   waterValue = waterFilter.getAverage(MEDIAN_SAMPLES);
-  
+
   // lightValue = analogRead(lightPin); // lightFilter.processValue(analogRead(lightPin));
   // soilValue = analogRead(soilPin); // soilFilter.processValue(analogRead(soilPin));
   // waterValue = analogRead(waterPin); // waterFilter.processValue(analogRead(waterPin));
@@ -271,6 +274,17 @@ void loop() {
     analogWrite(gatePin, GATE_OFF);
     displaySoilLevel(soilValue);
   }
+
+  // picture loop
+  u8g.firstPage();
+  do {
+    draw();
+  } while (u8g.nextPage());
+}
+
+void draw() {
+  u8g.setFont(u8g_font_unifont);
+  u8g.drawStr(20, 20, "Hello World!");
 }
 
 void fadeIn() {
